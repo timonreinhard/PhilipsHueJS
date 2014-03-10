@@ -1,0 +1,104 @@
+<html>
+<head>
+	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+	<script type="text/javascript" src="libs/jquery.colors.pickers.hslLite.bundle.min.js"></script>
+	<script type="text/javascript" src="../philipshue.js"></script>
+	<style type="text/css" rel="stylesheet">
+		html
+		{
+			background:#EFEFEF;
+		}
+		body
+		{
+			font-family:Arial,'sans-serif';
+		}
+		.block
+		{
+			margin:15px 0px;
+		}
+		#colourPicker .s
+		{
+			display:none;
+		}
+		.colourBox
+		{
+			width:500px;
+			height:200px;
+			border:1px dashed #000;
+		}
+		.colourBox .rgbValue,
+		.colourBox .xyValue
+		{
+			background:#FFF;
+			background:rgba(255,255,255,0.8);
+			padding:2px;
+		}
+	</style>
+</head>
+<body>
+	<h1>PhilipsHueJS Example</h1>
+	<div class="block">
+		Choose Type/Model
+		<div>
+			<select id="type">
+				<option value="hueBulbs">Hue Bulbs</option>
+				<option value="livingColours">Living Colours</option>
+				<option value="default">Default</option>
+			</select>
+		</div>
+	</div>
+	<div class="block">
+		Choose Colour
+		<div id="colourPicker"></div>
+	</div>
+	<div class="block">
+		Selected Colour
+		<div id="selectedColour" class="colourBox">
+			<div class="rgbValue">&nbsp;</div>
+			<div class="xyValue">&nbsp;</div>
+		</div>
+	</div>
+	<div class="block">
+		Conversion to XY and back
+		<div id="transformedColour" class="colourBox">
+			<div class="rgbValue">&nbsp;</div>
+			<div class="xyValue">&nbsp;</div>
+		</div>
+	</div>
+	<div class="block">
+		<small>The Fine Print: This is in no way associated with Philips or the Hue lightbulbs. All trademarks belong to the registered owners.</small>
+		<small>This example uses <a href="http://enideo.com/code/jquery-colors-pickers-hsl-plugin/">jQuery Colors Pickers HSL</a></small>
+	</div>
+	<script type="text/javascript">
+		$(function()
+		{
+			var currentColour = $('#colourPicker').hslLiteColorPicker({
+				h: 180, s: 100, l: 50,
+				onChange: function(colour)
+				{
+					currentColour = colour;
+					updateColour();
+				}
+			}).hslLiteColorPicker('color');
+			
+			function updateColour()
+			{
+				var rgbData = currentColour.format('array3Octet');
+				$('#selectedColour').css('background', currentColour.toString());
+				$('#selectedColour .rgbValue').text("RGB: " + rgbData.toString());
+				var toXY = PhilipsHue.RGBToXY(rgbData[0],rgbData[1],rgbData[2], 'default');
+				$('#selectedColour .xyValue').text("X: " + toXY.X + " - Y: " + toXY.Y);
+				
+				var type = $('#type').val();
+				toXY = PhilipsHue.RGBToXY(rgbData[0],rgbData[1],rgbData[2], type);
+				var fromXY = PhilipsHue.XYToRGB(toXY, type);
+				$('#transformedColour').css('background', "rgb(" + fromXY.Red + "," + fromXY.Green + "," + fromXY.Blue + ")");
+				$('#transformedColour .rgbValue').text("RGB: " + fromXY.Red + "," + fromXY.Green + "," + fromXY.Blue);				
+				$('#transformedColour .xyValue').text("X: " + toXY.X + " - Y: " + toXY.Y);
+			}
+			
+			$('#type').change(updateColour);
+		});
+	</script>
+</body>
+</html>

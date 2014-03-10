@@ -1,6 +1,12 @@
 //More Information: https://github.com/PhilipsHue/PhilipsHueSDK-iOS-OSX/blob/master/ApplicationDesignNotes/RGB%20to%20xy%20Color%20conversion.md
 
 var PhilipsHue = {
+	//eg. Hue = 180, Saturation = 100, Lightness = 50, Type = "hueBulbs"/"livingColors"/"default"
+	HSLToXY: function(Hue, Saturation, Lightness, TypeOrModel)
+	{
+		var rgb = this.Utilities.HSLToRGB(Hue, Saturation, Lightness);
+		return this.RGBToXY(rgb.Red, rgb.Green, rgb.Blue, TypeOrModel);
+	},
 	//eg. Red = 240, Green = 200, Blue = 190, Type = "hueBulbs"/"livingColors"/"default"
 	RGBToXY: function(Red, Green, Blue, TypeOrModel)
 	{
@@ -106,7 +112,18 @@ var PhilipsHue = {
 
 		var Y = 1.0;
 		var X = (Y / y) * x;
+		
+		if (isNaN(X))
+		{
+			X = 0;
+		}
+		
 		var Z = (Y / y) * z;
+		
+		if (isNaN(Z))
+		{
+			Z = 0;
+		}
 
 		var r = X * 3.2406 - Y * 1.5372 - Z * 0.4986;
 		var g = -X * 0.9689 + Y * 1.8758 + Z * 0.0415;
@@ -171,14 +188,10 @@ var PhilipsHue = {
 			}
 		}
 
-		r = Math.abs(Math.round(r * 255));
-		g = Math.abs(Math.round(g * 255));
-		b = Math.abs(Math.round(b * 255));
+		r = Math.min(Math.abs(Math.round(r * 255)), 255);
+		g = Math.min(Math.abs(Math.round(g * 255)), 255);
+		b = Math.min(Math.abs(Math.round(b * 255)), 255);
 		return { Red: r, Green: g, Blue: b };
-	},
-	XYToTrueRGB: function(X, Y, TypeOrModel)
-	{
-		//Do the same as above but reverse it to its true values
 	},
 	Utilities: {
 		GetColourPointsForModel: function(Model)
@@ -274,6 +287,40 @@ var PhilipsHue = {
 			var t = this.GetCrossProduct(v1, q) / this.GetCrossProduct(v1, v2);
 
 			return (s >= 0.0 && t >= 0.0 && s + t < 1.0);
+		},
+		//Method from StackOverflow
+		//http://stackoverflow.com/a/9493060/1676444
+		HSLToRGB: function(Hue, Saturation, Lightness)
+		{
+			var red, green, blue;
+			if (Saturation == 0)
+			{
+				red = green = blue = Lightness;
+			}
+			else
+			{
+				function hue2rgb(p, q, t)
+				{
+					if(t < 0) t += 1;
+					if(t > 1) t -= 1;
+					if(t < 1/6) return p + (q - p) * 6 * t;
+					if(t < 1/2) return q;
+					if(t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+					return p;
+				}
+				
+				var q = Lightness < 0.5 ? Lightness * (1 + Saturation) : Lightness + Saturation - Lightness * Saturation;
+				var p = 2 * Lightness - q;
+				red = hue2rgb(p, q, Hue + 1/3);
+				red = hue2rgb(p, q, Hue);
+				red = hue2rgb(p, q, Hue - 1/3);
+			}
+			
+			red = Math.round(red * 255);
+			green = Math.round(green * 255);
+			blue = Math.round(blue * 255);
+			
+			return { Red: red, Green: green, Blue: blue };
 		}
 	}
 };
