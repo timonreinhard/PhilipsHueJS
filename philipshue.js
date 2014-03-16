@@ -80,7 +80,7 @@ var PhilipsHue = {
 	XYToRGB: function(Point, TypeOrModel)
 	{
 		//Check reach of lamp
-		var colourPoints = this.Utilities.GetColourPointsForModel(TypeOrModel);
+		/*var colourPoints = this.Utilities.GetColourPointsForModel(TypeOrModel);
 		var inReachOfLamps = this.Utilities.CheckPointInLampsReach(Point, colourPoints);
 
 		if (!inReachOfLamps)
@@ -108,7 +108,7 @@ var PhilipsHue = {
 
 			Point.X = closestPoint.X;
 			Point.Y = closestPoint.Y;
-		}
+		}*/
 
 		var x = Point.X;
 		var y = Point.Y;
@@ -166,16 +166,30 @@ var PhilipsHue = {
 			}
 			xmlhttp.open(Method, Url);
 			xmlhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
-			xmlhttp.send(JSON.stringify(Data));
+			xmlhttp.send(Method != "GET" ? JSON.stringify(Data) : null);
 		},
 		ChangeState: function(Host, Light, Data, Callback)
 		{
 			this.SendRequestRaw("http://" + Host + "/api/newdeveloper/lights/" + Light + "/state", "PUT", Data, Callback);
 		},
+		GetLight: function(Host, Light, Callback)
+		{
+			this.SendRequestRaw("http://" + Host + "/api/newdeveloper/lights/" + Light + "/", "GET", null, Callback);
+		},
 		SetXY: function(Host, Light, Point, Callback)
 		{
 			var luminance = Math.round(Point.Luminance * 255);
 			this.ChangeState(Host, Light, { "xy" : [ Math.round(Point.X * 10000) / 10000, Math.round(Point.Y * 10000) / 10000 ], "bri": luminance }, Callback);
+		},
+		GetXY: function(Host, Light, Callback)
+		{
+			this.GetLight(Host, Light, function(Properties)
+			{
+				var xy = Properties.state.xy;
+				var luminance = Properties.state.bri / 255;
+				
+				Callback(new CGPoint(xy[0], xy[1], luminance));
+			});
 		},
 		SetHSL: function(Host, Light, Hue, Saturation, Luminance, Callback)
 		{
@@ -184,6 +198,21 @@ var PhilipsHue = {
 			Luminance = Math.round(Luminance * (255 / 100));
 			
 			this.ChangeState(Host, Light, { "hue": Hue, "sat": Saturation, "bri": Luminance }, Callback);
+		},
+		GetHSL: function(Host, Light, Callback)
+		{
+			this.GetLight(Host, Light, function(Properties)
+			{
+				//var hue = Math.round(Properties.state.hue / (65535 / 360));
+				//var saturation = Math.round(Properties.state.sat / (255 / 100));
+				//var luminance = Math.round(Properties.state.bri / (255 / 100));
+				
+				var hue = Properties.state.hue / 65535;
+				var saturation = Properties.state.sat / 255;
+				var luminance = Properties.state.bri / 255;
+				
+				Callback({ Hue: hue, Saturation: saturation, Luminance: luminance });
+			});
 		}
 	},
 	Utilities: {
@@ -351,8 +380,8 @@ var PhilipsHue = {
 				var q = Lightness < 0.5 ? Lightness * (1 + Saturation) : Lightness + Saturation - Lightness * Saturation;
 				var p = 2 * Lightness - q;
 				red = hue2rgb(p, q, Hue + 1/3);
-				red = hue2rgb(p, q, Hue);
-				red = hue2rgb(p, q, Hue - 1/3);
+				green = hue2rgb(p, q, Hue);
+				blue = hue2rgb(p, q, Hue - 1/3);
 			}
 
 			red = Math.round(red * 255);

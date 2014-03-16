@@ -76,8 +76,21 @@
 		Conversion to XY and back
 		<div id="transformedColour" class="colourBox">
 			<div class="rgbValue">&nbsp;</div>
-			<div class="hslValue">&nbsp;</div>
 			<div class="xyValue">&nbsp;</div>
+		</div>
+	</div>
+	<div class="block">
+		Actual XY
+		<div id="actualColour" class="colourBox">
+			<div class="rgbValue">&nbsp;</div>
+			<div class="xyValue">&nbsp;</div>
+		</div>
+	</div>
+	<div class="block">
+		Actual HSL
+		<div id="actualHSLColour" class="colourBox">
+			<div class="rgbValue">&nbsp;</div>
+			<div class="hslValue">&nbsp;</div>
 		</div>
 	</div>
 	<div class="block">
@@ -102,6 +115,34 @@
 				var hsl = currentColour.inputColor;
 				PhilipsHue.API.SetHSL(host, light, hsl[0], hsl[1], hsl[2]);
 			}
+			window.actualXY = function actualXY()
+			{
+				var host = $('#ipAddress').val(), light = $('#bulb').val();
+				PhilipsHue.API.GetXY(host, light, function(Point)
+				{
+					var trueRGB = PhilipsHue.XYToRGB(Point, type);
+					$('#actualColour').css('background', "rgb(" + trueRGB.Red + "," + trueRGB.Green + "," + trueRGB.Blue + ")");
+					$('#actualColour .rgbValue').text("RGB: " + trueRGB.Red + "," + trueRGB.Green + "," + trueRGB.Blue);
+					$('#actualColour .xyValue').text("X: " + Point.X + " - Y: " + Point.Y + " - Luminance: " + Point.Luminance);
+				});
+			}
+			window.actualHSL = function actualHSL()
+			{
+				var host = $('#ipAddress').val(), light = $('#bulb').val();
+				PhilipsHue.API.GetHSL(host, light, function(HSL)
+				{
+					//HSL.Hue /= 360;
+					var rgb = PhilipsHue.Utilities.HSLToRGB(HSL.Hue, HSL.Saturation, HSL.Luminance);
+					$('#actualHSLColour').css('background', "rgb(" + rgb.Red + "," + rgb.Green + "," + rgb.Blue + ")");
+					$('#actualHSLColour .rgbValue').text("RGB: " + rgb.Red + "," + rgb.Green + "," + rgb.Blue);
+					HSL.Hue *= 360;
+					HSL.Saturation *= 100;
+					HSL.Luminance *= 100;
+					$('#actualHSLColour .hslValue').text("HSL: " + HSL.Hue + "," + HSL.Saturation + "," + HSL.Luminance);
+				});
+			}
+			
+			var getXYTimeout = null;
 
 			function updateColour()
 			{
@@ -109,10 +150,14 @@
 
 				var rgbData = currentColour.format('array3Octet');
 				$('#selectedColour').css('background', currentColour.toString());
-				$('#selectedColour .hslValue').text("HSL: " + PhilipsHue.Utilities.RGBToHSL(rgbData[0],rgbData[1],rgbData[2]));
+				var tmpHSL = PhilipsHue.Utilities.RGBToHSL(rgbData[0],rgbData[1],rgbData[2]);
+				tmpHSL[0] *= 360;
+				tmpHSL[1] *= 100;
+				tmpHSL[2] *= 100;
+				$('#selectedColour .hslValue').text("HSL: " + tmpHSL[0] + "," + tmpHSL[1] + "," + tmpHSL[2]);
 				$('#selectedColour .rgbValue').text("RGB: " + rgbData.toString());
 				var toXY = PhilipsHue.RGBToXY(rgbData[0],rgbData[1],rgbData[2], 'default');
-				$('#selectedColour .xyValue').text("X: " + toXY.X + " - Y: " + toXY.Y);
+				$('#selectedColour .xyValue').text("X: " + toXY.X + " - Y: " + toXY.Y + " - Luminance: " + toXY.Luminance);
 				PhilipsHue.API.SetXY(host, light, toXY);
 				//var hsl = currentColour.inputColor;
 				//PhilipsHue.API.SetHSL(host, light, hsl[0], hsl[1], hsl[2]);
@@ -122,7 +167,17 @@
 				var fromXY = PhilipsHue.XYToRGB(toXY, type);
 				$('#transformedColour').css('background', "rgb(" + fromXY.Red + "," + fromXY.Green + "," + fromXY.Blue + ")");
 				$('#transformedColour .rgbValue').text("RGB: " + fromXY.Red + "," + fromXY.Green + "," + fromXY.Blue);
-				$('#transformedColour .xyValue').text("X: " + toXY.X + " - Y: " + toXY.Y);
+				$('#transformedColour .xyValue').text("X: " + toXY.X + " - Y: " + toXY.Y + " - Luminance: " + toXY.Luminance);
+				
+				if (getXYTimeout != null)
+					clearTimeout(getXYTimeout);
+				$('#actualColour .rgbValue,#actualColour .xyValue').empty().eq(0).text("Getting colour information...");
+				$('#actualHSLColour .rgbValue,#actualHSLColour .hslValue').empty().eq(0).text("Getting colour information...");
+				getXYTimeout = setTimeout(function()
+				{
+					actualXY();
+					actualHSL();
+				}, 1750);
 			}
 
 			$('#type').change(updateColour);
